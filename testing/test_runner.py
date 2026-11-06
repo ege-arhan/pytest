@@ -173,7 +173,11 @@ class TestSetupState:
         pytester.makepyfile(
             """
             import asyncio
+            import sys
             import pytest
+
+            if sys.version_info < (3, 11):
+                from exceptiongroup import BaseExceptionGroup
 
             allocations = 0
 
@@ -202,6 +206,13 @@ class TestSetupState:
         )
         result = pytester.runpytest()
         result.assert_outcomes(passed=2, errors=1)
+        result.stdout.fnmatch_lines(
+            [
+                "*BaseExceptionGroup: cleanup (2 sub-exceptions)*",
+                "*asyncio.exceptions.CancelledError: cancel marker*",
+                "*RuntimeError: ordinary marker*",
+            ]
+        )
 
     def test_cached_exception_doesnt_get_longer(self, pytester: Pytester) -> None:
         """Regression test for #12204 (the "BTW" case)."""
